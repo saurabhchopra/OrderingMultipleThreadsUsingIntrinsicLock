@@ -1,21 +1,23 @@
 package com.srb.main.operation;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
+
+import com.srb.main.Application;
 
 public class OperationB implements Runnable {
 
-	Lock lock = null;
+	Application application = null;
+
 	AtomicBoolean firstOperation = null;
 	AtomicBoolean secondOperation = null;
 
 	/**
-	 * @param lock
+	 * @param application
 	 * @param firstOperation
 	 * @param secondOperation
 	 */
-	public OperationB(Lock lock, AtomicBoolean firstOperation, AtomicBoolean secondOperation) {
-		this.lock = lock;
+	public OperationB(Application application, AtomicBoolean firstOperation, AtomicBoolean secondOperation) {
+		this.application = application;
 		this.firstOperation = firstOperation;
 		this.secondOperation = secondOperation;
 	}
@@ -28,28 +30,32 @@ public class OperationB implements Runnable {
 	@Override
 	public void run() {
 		while (true) {
-			performOperationWithLock();
+			performOperation();
 		}
 	}
 
 	/**
 	 * 
 	 */
-	private void performOperationWithLock() {
-		if (firstOperation.get()) {
-			try {
-				lock.lock();
-				Thread.sleep(1000);
-				firstOperation.set(false);
-				System.out.println("Operation B");
-				secondOperation.set(true);
-				notifyAll();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} finally {
-				lock.unlock();
+	private void performOperation() {
+		synchronized (application) {
+			if (firstOperation.get()) {
+				try {
+					Thread.sleep(1000);
+					firstOperation.set(false);
+					System.out.println("Operation B");
+					secondOperation.set(true);
+					application.notifyAll();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			} else {
+				try {
+					application.wait();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
-
 		}
 	}
 }
